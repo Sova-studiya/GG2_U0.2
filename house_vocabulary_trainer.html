@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тренажёр слов: House and things in the house</title>
+    <style>
+        /* === БАЗОВЫЕ НАСТРОЙКИ СТИЛЕЙ === */
+        :root {
+            /* Цветовая палитра: спокойная, подходящая для 10 лет */
+            --primary: #4a90e2;
+            --primary-hover: #357abd;
+            --secondary: #f0f4f8;
+            --text-dark: #2c3e50;
+            --text-light: #7f8c8d;
+            --correct: #27ae60;
+            --wrong: #e74c3c;
+            --card-bg: #ffffff;
+            --star-color: #f1c40f;
+            --star-empty: #bdc3c7;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: var(--secondary); color: var(--text-dark); line-height: 1.5; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        
+        /* Утилиты */
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        button { cursor: pointer; border: none; outline: none; font-family: inherit; transition: all 0.2s; }
+        
+        /* === ШАПКА === */
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; background: var(--card-bg); padding: 15px 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .header-title { font-size: 1.2rem; font-weight: bold; color: var(--primary); }
+        .btn-home { background: var(--secondary); color: var(--text-dark); padding: 8px 15px; border-radius: 8px; font-weight: bold; }
+        .btn-home:hover { background: #e2e8f0; }
+
+        /* === ГЛАВНОЕ МЕНЮ (УРОВНИ) === */
+        .levels-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .level-card { background: var(--card-bg); border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; border: 2px solid transparent; }
+        .level-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: var(--primary); }
+        .level-number { font-size: 1.5rem; font-weight: bold; color: var(--primary); margin-bottom: 10px; }
+        .level-title { font-size: 1.1rem; margin-bottom: 15px; min-height: 48px;}
+        .stars-container { font-size: 1.5rem; letter-spacing: 5px; }
+        .star { color: var(--star-empty); }
+        .star.filled { color: var(--star-color); text-shadow: 0 0 5px rgba(241, 196, 15, 0.5); }
+
+        /* === ИНТЕРФЕЙС ИГРЫ === */
+        .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .progress-bar { flex-grow: 1; height: 10px; background: #e2e8f0; border-radius: 5px; margin: 0 20px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s ease; }
+        .counter { font-weight: bold; color: var(--text-light); }
+
+        .question-area { background: var(--card-bg); padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;}
+        .question-text { font-size: 2rem; font-weight: bold; margin-bottom: 15px; }
+        .question-hint { font-size: 1.1rem; color: var(--text-light); margin-bottom: 15px; }
+        .question-emoji { font-size: 3rem; margin-bottom: 10px; }
+        
+        /* Кнопка озвучки */
+        .btn-audio { background: #e2e8f0; border-radius: 50%; width: 50px; height: 50px; display: inline-flex; justify-content: center; align-items: center; font-size: 1.5rem; margin-bottom: 15px; transition: background 0.2s; }
+        .btn-audio:hover { background: #cbd5e1; }
+        .btn-audio:active { transform: scale(0.95); }
+
+        /* Варианты ответов */
+        .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; width: 100%; }
+        .btn-option { background: var(--secondary); color: var(--text-dark); padding: 15px; border-radius: 10px; font-size: 1.1rem; font-weight: 500; border: 2px solid transparent; display: flex; justify-content: space-between; align-items: center; word-break: break-word;}
+        .btn-option:hover { background: #e2e8f0; }
+        .btn-option.correct { background: #d4edda !important; border-color: var(--correct) !important; color: #155724 !important; }
+        .btn-option.wrong { background: #f8d7da !important; border-color: var(--wrong) !important; color: #721c24 !important; animation: shake 0.4s; }
+        
+        /* Специфичные стили уровней */
+        .letters-grid { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+        .btn-letter { background: var(--primary); color: white; width: 50px; height: 50px; font-size: 1.5rem; font-weight: bold; border-radius: 8px; }
+        .btn-letter:hover { background: var(--primary-hover); }
+        .btn-letter:disabled { background: #cbd5e1; cursor: not-allowed; transform: none; }
+        
+        .build-slots { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 30px; min-height: 50px; }
+        .build-slot { width: 40px; height: 50px; border-bottom: 3px solid var(--text-dark); display: flex; justify-content: center; align-items: flex-end; font-size: 1.8rem; font-weight: bold; padding-bottom: 5px; cursor: pointer;}
+        .build-slot.filled { border-bottom-color: var(--primary); color: var(--primary); }
+        .build-slot.correct { color: var(--correct); border-bottom-color: var(--correct); }
+        .build-slot.wrong { color: var(--wrong); border-bottom-color: var(--wrong); }
+        .build-controls { display: flex; gap: 15px; justify-content: center; margin-top: 20px; }
+        .btn-action { background: var(--secondary); padding: 10px 20px; border-radius: 8px; font-weight: bold; color: var(--text-dark); }
+        .btn-action:hover { background: #e2e8f0; }
+
+        .dictation-input { width: 100%; max-width: 400px; padding: 15px; font-size: 1.5rem; border: 2px solid #cbd5e1; border-radius: 10px; text-align: center; margin-bottom: 20px; outline: none; }
+        .dictation-input:focus { border-color: var(--primary); }
+        .dictation-input.correct { border-color: var(--correct); background: #d4edda; }
+        .dictation-input.wrong { border-color: var(--wrong); background: #f8d7da; animation: shake 0.4s; }
+
+        /* === СЛОВАРИК (УРОВЕНЬ 1) === */
+        .dictionary-controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;}
+        .dictionary-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+        .dict-card { background: var(--card-bg); padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 10px;}
+        .dict-header { display: flex; justify-content: space-between; align-items: center; }
+        .dict-word { font-weight: bold; font-size: 1.2rem; color: var(--primary); }
+        .dict-def { color: var(--text-light); font-size: 0.95rem; }
+        .dict-card .btn-audio { width: 35px; height: 35px; font-size: 1rem; margin: 0; }
+        
+        .hide-defs .dict-def { visibility: hidden; opacity: 0; transition: opacity 0.2s; }
+
+        /* === ФИНАЛЬНЫЙ ЭКРАН === */
+        .result-screen { text-align: center; padding: 40px 20px; background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .result-title { font-size: 2.5rem; color: var(--primary); margin-bottom: 20px; }
+        .result-stars { font-size: 4rem; margin-bottom: 30px; letter-spacing: 10px; }
+        .result-text { font-size: 1.2rem; margin-bottom: 30px; color: var(--text-light); }
+        .result-controls { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
+        .btn-primary { background: var(--primary); color: white; padding: 12px 25px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; }
+        .btn-primary:hover { background: var(--primary-hover); }
+
+        /* Анимации */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Адаптивность */
+        @media (max-width: 600px) {
+            .options-grid { grid-template-columns: 1fr; }
+            .header-title { font-size: 1rem; }
+            .question-text { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 
+    ========================================================================
+    МАССИВ СЛОВ (ДЛЯ ПРЕПОДАВАТЕЛЯ)
+    ========================================================================
+    Как изменить список слов:
+    1. Каждое слово заключено в фигурные скобки {}.
+    2. word - слово на изучаемом языке.
+    3. translation - перевод на русский.
+    4. definition - простое объяснение на английском (используется для детей >= 10 лет).
+    5. emoji - картинка.
+    Добавляйте или удаляйте блоки с соблюдением запятых между ними.
+-->
+<script>
+const wordsList = [
+    { word: "house", translation: "дом", definition: "a building where people live", emoji: "🏠" },
+    { word: "flat", translation: "квартира", definition: "rooms for living in, usually on one floor of a building", emoji: "🏢" },
+    { word: "room", translation: "комната", definition: "a part of a building with its own walls and door", emoji: "🚪" },
+    { word: "living room", translation: "гостиная", definition: "a room where you relax and watch TV", emoji: "🛋️" },
+    { word: "bedroom", translation: "спальня", definition: "a room where you sleep", emoji: "🛏️" },
+    { word: "bathroom", translation: "ванная", definition: "a room where you wash yourself", emoji: "🛁" },
+    { word: "kitchen", translation: "кухня", definition: "a room where you cook food", emoji: "🍳" },
+    { word: "hall", translation: "коридор", definition: "the room just inside the front door", emoji: "🚪" },
+    { word: "door", translation: "дверь", definition: "you open and close it to go into a room", emoji: "🚪" },
+    { word: "window", translation: "окно", definition: "you look through it to see outside", emoji: "🪟" },
+    { word: "floor", translation: "пол", definition: "the part of a room that you walk on", emoji: "🪵" },
+    { word: "wall", translation: "стена", definition: "a side of a room", emoji: "🧱" },
+    { word: "ceiling", translation: "потолок", definition: "the top part of a room inside", emoji: "⬆️" },
+    { word: "roof", translation: "крыша", definition: "the top of a house on the outside", emoji: "🏠" },
+    { word: "garden", translation: "сад", definition: "a place outside with grass and flowers", emoji: "🌳" },
+    { word: "garage", translation: "гараж", definition: "a building for a car", emoji: "🚗" },
+    { word: "table", translation: "стол", definition: "a piece of furniture with legs and a flat top", emoji: "🪑" },
+    { word: "chair", translation: "стул", definition: "a seat for one person, with a back", emoji: "🪑" },
+    { word: "armchair", translation: "кресло", definition: "a comfortable chair for resting your arms", emoji: "🛋️" },
+    { word: "sofa", translation: "диван", definition: "a long comfortable seat for two or more people", emoji: "🛋️" },
+    { word: "bed", translation: "кровать", definition: "a piece of furniture that you sleep on", emoji: "🛏️" },
+    { word: "wardrobe", translation: "шкаф для одежды", definition: "a large cupboard for keeping clothes in", emoji: "🚪" },
+    { word: "cupboard", translation: "шкаф", definition: "furniture with doors for storing things", emoji: "🗄️" },
+    { word: "mirror", translation: "зеркало", definition: "you look in it to see yourself", emoji: "🪞" },
+    { word: "lamp", translation: "лампа", definition: "it gives you light in the room", emoji: "💡" },
+    { word: "carpet", translation: "ковер", definition: "a thick material that covers the floor", emoji: "🧶" },
+    { word: "clock", translation: "часы", definition: "it tells you the time", emoji: "⏰" },
+    { word: "bath", translation: "ванна", definition: "a large container you fill with water to wash in", emoji: "🛁" },
+    { word: "shower", translation: "душ", definition: "you stand under it to wash yourself", emoji: "🚿" },
+    { word: "toilet", translation: "туалет", definition: "a bowl that you sit on in the bathroom", emoji: "🚽" },
+    { word: "fridge", translation: "холодильник", definition: "a machine that keeps food cold", emoji: "🧊" },
+    { word: "cooker", translation: "плита", definition: "a machine for cooking food", emoji: "🍳" },
+    { word: "television", translation: "телевизор", definition: "a machine with a screen for watching programs", emoji: "📺" },
+    { word: "computer", translation: "компьютер", definition: "an electronic machine for working or games", emoji: "💻" },
+    { word: "shelf", translation: "полка", definition: "a flat board on a wall for putting things on", emoji: "📚" }
+];
+</script>
+
+<div class="container">
+    <header>
+        <div class="header-title">🏠 House and things in the house</div>
+        <button id="btn-menu" class="btn-home hidden" onclick="app.showMenu()">В меню</button>
+    </header>
+
+    <!-- Главное меню -->
+    <div id="main-menu">
+        <div class="levels-grid">
+            <div class="level-card" onclick="app.startLevel(1)">
+                <div class="level-number">Уровень 1</div>
+                <div class="level-title">📖 Словарик</div>
+                <div class="stars-container" id="stars-1">☆☆☆</div>
+            </div>
+            <div class="level-card" onclick="app.startLevel(2)">
+                <div class="level-number">Уровень 2</div>
+                <div class="level-title">🔍 Слово → Определение</div>
+                <div class="stars-container" id="stars-2">☆☆☆</div>
+            </div>
+            <div class="level-card" onclick="app.startLevel(3)">
+                <div class="level-number">Уровень 3</div>
+                <div class="level-title">🧩 Определение → Слово</div>
+                <div class="stars-container" id="stars-3">☆☆☆</div>
+            </div>
+            <div class="level-card" onclick="app.startLevel(4)">
+                <div class="level-number">Уровень 4</div>
+                <div class="level-title">🎧 Аудио → Слово</div>
+                <div class="stars-container" id="stars-4">☆☆☆</div>
+            </div>
+            <div class="level-card" onclick="app.startLevel(5)">
+                <div class="level-number">Уровень 5</div>
+                <div class="level-title">🔤 Пропущенная буква</div>
+                <div class="stars-container" id="stars-5">☆☆☆</div>
+            </div>
+            <div class="level-card" onclick="app.startLevel(6)">
+                <div class="level-number">Уровень 6</div>
+                <div class="level-title">🏗️ Собери слово</div>
+                <div class="stars-container" id="stars-6">☆☆☆</div>
+            </div>
+            <div class="level-card" onclick="app.startLevel(7)">
+                <div class="level-number">Уровень 7</div>
+                <div class="level-title">✍️ Диктант</div>
+                <div class="stars-container" id="stars-7">☆☆☆</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Контейнер игры (Уровни 2-7) -->
+    <div id="game-container" class="hidden">
+        <div class="game-header">
+            <div class="counter" id="score-counter">0 / 35</div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        </div>
+        
+        <div id="question-area" class="question-area">
+            <!-- Динамический контент вопросов -->
+        </div>
+
+        <div id="options-area" class="options-grid">
+            <!-- Динамические варианты ответов -->
+        </div>
+    </div>
+
+    <!-- Контейнер Словарика (Уровень 1) -->
+    <div id="dictionary-container" class="hidden">
+        <div class="dictionary-controls">
+            <button class="btn-action" onclick="app.toggleDefinitions()" id="btn-toggle-def">Скрыть определения</button>
+            <button class="btn-primary" onclick="app.playAllWords()" id="btn-play-all">▶️ Озвучить всё</button>
+        </div>
+        <div class="dictionary-list" id="dictionary-list">
+            <!-- Динамический список слов -->
+        </div>
+    </div>
+
+    <!-- Финальный экран -->
+    <div id="result-screen" class="result-screen hidden">
+        <div class="result-title">Отлично!</div>
+        <div class="result-stars" id="result-stars">☆☆☆</div>
+        <div class="result-text" id="result-text">Вы прошли уровень!</div>
+        <div class="result-controls">
+            <button class="btn-action" onclick="app.restartLevel()">🔄 Пройти ещё раз</button>
+            <button class="btn-primary" onclick="app.nextLevel()">➡️ Следующий уровень</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const app = {
+    words: wordsList,
+    currentLevel: 0,
+    queue: [],
+    correctCount: 0,
+    errorCount: 0,
+    initialTotal: 0,
+    currentWord: null,
+    isProcessing: false,
+    isPlayingAll: false,
+    buildState: { target: '', current: [], pool: [] },
+    
+    // Элементы DOM
+    ui: {
+        menu: document.getElementById('main-menu'),
+        game: document.getElementById('game-container'),
+        dictionary: document.getElementById('dictionary-container'),
+        result: document.getElementById('result-screen'),
+        btnMenu: document.getElementById('btn-menu'),
+        questionArea: document.getElementById('question-area'),
+        optionsArea: document.getElementById('options-area'),
+        score: document.getElementById('score-counter'),
+        progress: document.getElementById('progress-fill'),
+        dictList: document.getElementById('dictionary-list')
+    },
+
+    speech: {
+        synth: window.speechSynthesis,
+        voice: null,
+        init() {
+            const setVoice = () => {
+                const voices = this.synth.getVoices();
+                this.voice = voices.find(v => v.lang.startsWith('en-US') || v.lang.startsWith('en-GB')) || voices[0];
+            };
+            setVoice();
+            if (this.synth.onvoiceschanged !== undefined) {
+                this.synth.onvoiceschanged = setVoice;
+            }
+        },
+        play(text, rate = 0.85) {
+            if (!this.synth) return Promise.resolve();
+            this.synth.cancel(); // Остановка предыдущего
+            return new Promise((resolve) => {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.voice = this.voice;
+                utterance.lang = 'en-US';
+                utterance.rate = rate;
+                utterance.onend = resolve;
+                utterance.onerror = resolve; // Продолжаем даже при ошибке
+                this.synth.speak(utterance);
+            });
+        },
+        stop() {
+            if (this.synth) this.synth.cancel();
+        }
+    },
+
+    storage: {
+        key: 'vocabTrainerProgress',
+        get() {
+            try { return JSON.parse(localStorage.getItem(this.key)) || {}; }
+            catch(e) { return {}; }
+        },
+        save(level, stars) {
+            try {
+                let data = this.get();
+                data[level] = Math.max(data[level] || 0, stars);
+                localStorage.setItem(this.key, JSON.stringify(data));
+            } catch(e) { console.warn('LocalStorage недоступен'); }
+        }
+    },
+
+    utils: {
+        shuffle(array) {
+            let arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        },
+        getDistractors(correctWord, count, key) {
+            let distractors = app.words.filter(w => w.word !== correctWord.word);
+            distractors = this.shuffle(distractors).slice(0, count);
+            return distractors.map(w => w[key]);
+        },
+        wait(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    },
+
+    init() {
+        this.speech.init();
+        this.updateMenuStars();
+    },
+
+    updateMenuStars() {
+        const progress = this.storage.get();
+        for (let i = 1; i <= 7; i++) {
+            const starsObj = document.getElementById(`stars-${i}`);
+            if (starsObj) {
+                const starsCount = progress[i] || 0;
+                starsObj.innerHTML = '★'.repeat(starsCount).padEnd(3, '☆')
+                    .replace(/★/g, '<span class="star filled">★</span>')
+                    .replace(/☆/g, '<span class="star">☆</span>');
+            }
+        }
+    },
+
+    hideAll() {
+        this.ui.menu.classList.add('hidden');
+        this.ui.game.classList.add('hidden');
+        this.ui.dictionary.classList.add('hidden');
+        this.ui.result.classList.add('hidden');
+        this.ui.btnMenu.classList.remove('hidden');
+        this.speech.stop();
+        this.isPlayingAll = false;
+    },
+
+    showMenu() {
+        this.hideAll();
+        this.ui.menu.classList.remove('hidden');
+        this.ui.btnMenu.classList.add('hidden');
+        this.updateMenuStars();
+    },
+
+    startLevel(levelNumber) {
+        this.currentLevel = levelNumber;
+        this.hideAll();
+        
+        if (levelNumber === 1) {
+            this.renderDictionary();
+            this.ui.dictionary.classList.remove('hidden');
+            return;
+        }
+
+        this.queue = this.utils.shuffle(this.words);
+        this.initialTotal = this.queue.length;
+        this.correctCount = 0;
+        this.errorCount = 0;
+        this.isProcessing = false;
+        
+        this.ui.game.classList.remove('hidden');
+        this.updateProgressUI();
+        this.nextQuestion();
+    },
+
+    updateProgressUI() {
+        this.ui.score.textContent = `${this.correctCount} / ${this.initialTotal}`;
+        const percentage = (this.correctCount / this.initialTotal) * 100;
+        this.ui.progress.style.width = `${percentage}%`;
+    },
+
+    nextQuestion() {
+        if (this.queue.length === 0) {
+            this.finishLevel();
+            return;
+        }
+        this.currentWord = this.queue.shift();
+        this.ui.questionArea.innerHTML = '';
+        this.ui.optionsArea.innerHTML = '';
+        this.ui.optionsArea.className = 'options-grid'; // Сброс классов
+
+        switch (this.currentLevel) {
+            case 2: this.renderQuiz('word', 'definition'); break;
+            case 3: this.renderQuiz('definition', 'word'); break;
+            case 4: this.renderAudioQuiz(); break;
+            case 5: this.renderMissingLetter(); break;
+            case 6: this.renderBuildWord(); break;
+            case 7: this.renderDictation(); break;
+        }
+    },
+
+    renderDictionary() {
+        this.ui.dictList.innerHTML = '';
+        this.words.forEach(w => {
+            const card = document.createElement('div');
+            card.className = 'dict-card';
+            card.innerHTML = `
+                <div class="dict-header">
+                    <span class="dict-word">${w.word} ${w.emoji || ''}</span>
+                    <button class="btn-audio" onclick="app.speech.play('${w.word.replace(/'/g, "\\'")}')">🔊</button>
+                </div>
+                <div class="dict-def">${w.definition} <br><small style="color:#aaa">(${w.translation})</small></div>
+            `;
+            this.ui.dictList.appendChild(card);
+        });
+    },
+
+    toggleDefinitions() {
+        this.ui.dictList.classList.toggle('hide-defs');
+        const btn = document.getElementById('btn-toggle-def');
+        btn.textContent = this.ui.dictList.classList.contains('hide-defs') ? 'Показать определения' : 'Скрыть определения';
+    },
+
+    async playAllWords() {
+        const btn = document.getElementById('btn-play-all');
+        if (this.isPlayingAll) {
+            this.isPlayingAll = false;
+            this.speech.stop();
+            btn.innerHTML = '▶️ Озвучить всё';
+            return;
+        }
+        
+        this.isPlayingAll = true;
+        btn.innerHTML = '⏹️ Остановить';
+        
+        for (let w of this.words) {
+            if (!this.isPlayingAll) break;
+            
+            // Подсветка текущего слова
+            const cards = this.ui.dictList.querySelectorAll('.dict-card');
+            cards.forEach(c => c.style.border = 'none');
+            const currentCard = Array.from(cards).find(c => c.querySelector('.dict-word').textContent.includes(w.word));
+            if (currentCard) {
+                currentCard.style.border = `2px solid var(--primary)`;
+                currentCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            await this.speech.play(w.word, 0.8);
+            if (this.isPlayingAll) await this.utils.wait(1000);
+        }
+        
+        this.isPlayingAll = false;
+        btn.innerHTML = '▶️ Озвучить всё';
+        const cards = this.ui.dictList.querySelectorAll('.dict-card');
+        cards.forEach(c => c.style.border = 'none');
+    },
+
+    renderQuiz(questionKey, answerKey) {
+        // Вопрос
+        const qText = document.createElement('div');
+        qText.className = 'question-text';
+        qText.textContent = this.currentWord[questionKey];
+        
+        // Кнопка аудио только если показываем слово
+        if (questionKey === 'word') {
+            const audioBtn = document.createElement('button');
+            audioBtn.className = 'btn-audio';
+            audioBtn.innerHTML = '🔊';
+            audioBtn.onclick = () => this.speech.play(this.currentWord.word);
+            this.ui.questionArea.appendChild(audioBtn);
+        } else {
+            // Если показываем определение, добавляем эмодзи для подсказки
+            const emoji = document.createElement('div');
+            emoji.className = 'question-emoji';
+            emoji.textContent = this.currentWord.emoji;
+            this.ui.questionArea.appendChild(emoji);
+        }
+        
+        this.ui.questionArea.appendChild(qText);
+
+        // Варианты ответов
+        const correctAns = this.currentWord[answerKey];
+        const distractors = this.utils.getDistractors(this.currentWord, 3, answerKey);
+        const options = this.utils.shuffle([correctAns, ...distractors]);
+
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-option';
+            btn.innerHTML = `<span>${opt}</span>`;
+            btn.onclick = () => this.checkAnswer(opt === correctAns, btn);
+            this.ui.optionsArea.appendChild(btn);
+        });
+    },
+
+    renderAudioQuiz() {
+        const audioBtn = document.createElement('button');
+        audioBtn.className = 'btn-audio';
+        audioBtn.style.width = '80px';
+        audioBtn.style.height = '80px';
+        audioBtn.style.fontSize = '2.5rem';
+        audioBtn.innerHTML = '🔊';
+        audioBtn.onclick = () => this.speech.play(this.currentWord.word);
+        
+        const hint = document.createElement('div');
+        hint.className = 'question-hint';
+        hint.textContent = 'Нажмите, чтобы прослушать слово';
+
+        this.ui.questionArea.appendChild(audioBtn);
+        this.ui.questionArea.appendChild(hint);
+
+        const distractors = this.utils.getDistractors(this.currentWord, 3, 'word');
+        const options = this.utils.shuffle([this.currentWord.word, ...distractors]);
+
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-option';
+            btn.innerHTML = `<span>${opt}</span>`;
+            btn.onclick = () => this.checkAnswer(opt === this.currentWord.word, btn);
+            this.ui.optionsArea.appendChild(btn);
+        });
+
+        // Автовоспроизведение
+        setTimeout(() => this.speech.play(this.currentWord.word), 300);
+    },
+
+    renderMissingLetter() {
+        const word = this.currentWord.word;
+        // Выбираем случайный индекс буквы (игнорируем пробелы)
+        let validIndexes = [];
+        for(let i=0; i<word.length; i++) if(word[i] !== ' ') validIndexes.push(i);
+        const missingIndex = validIndexes[Math.floor(Math.random() * validIndexes.length)];
+        const correctLetter = word[missingIndex].toLowerCase();
+        
+        const displayWord = word.substring(0, missingIndex) + '_' + word.substring(missingIndex + 1);
+
+        this.ui.questionArea.innerHTML = `
+            <div class="question-emoji">${this.currentWord.emoji}</div>
+            <div class="question-text" style="letter-spacing: 5px;">${displayWord}</div>
+            <div class="question-hint">${this.currentWord.definition}</div>
+            <button class="btn-audio" onclick="app.speech.play('${this.currentWord.word.replace(/'/g, "\\'")}')">🔊</button>
+        `;
+
+        const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+        let options = [correctLetter];
+        while(options.length < 4) {
+            let r = alphabet[Math.floor(Math.random() * alphabet.length)];
+            if(!options.includes(r)) options.push(r);
+        }
+        options = this.utils.shuffle(options);
+
+        this.ui.optionsArea.className = 'letters-grid';
+        options.forEach(letter => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-letter';
+            btn.textContent = letter;
+            btn.onclick = () => this.checkAnswer(letter === correctLetter, btn);
+            this.ui.optionsArea.appendChild(btn);
+        });
+    },
+
+    renderBuildWord() {
+        const word = this.currentWord.word.replace(/\s+/g, ''); // без пробелов
+        this.buildState.target = word;
+        this.buildState.current = new Array(word.length).fill(null);
+        this.buildState.pool = this.utils.shuffle(word.split(''));
+
+        this.ui.questionArea.innerHTML = `
+            <div class="question-emoji">${this.currentWord.emoji}</div>
+            <div class="question-hint">${this.currentWord.definition}</div>
+            <button class="btn-audio" onclick="app.speech.play('${this.currentWord.word.replace(/'/g, "\\'")}')">🔊</button>
+        `;
+
+        this.updateBuildWordUI();
+    },
+
+    updateBuildWordUI() {
+        this.ui.optionsArea.innerHTML = '';
+        this.ui.optionsArea.className = '';
+
+        // Слоты для букв
+        const slotsContainer = document.createElement('div');
+        slotsContainer.className = 'build-slots';
+        this.buildState.current.forEach((letter, index) => {
+            const slot = document.createElement('div');
+            slot.className = `build-slot ${letter ? 'filled' : ''}`;
+            slot.textContent = letter || '';
+            slot.onclick = () => {
+                if (letter && !this.isProcessing) {
+                    this.buildState.current[index] = null;
+                    this.buildState.pool.push(letter);
+                    this.updateBuildWordUI();
+                }
+            };
+            slotsContainer.appendChild(slot);
+        });
+
+        // Доступные буквы
+        const poolContainer = document.createElement('div');
+        poolContainer.className = 'letters-grid';
+        this.buildState.pool.forEach((letter, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-letter';
+            btn.textContent = letter;
+            btn.onclick = () => {
+                if (this.isProcessing) return;
+                const emptyIndex = this.buildState.current.indexOf(null);
+                if (emptyIndex !== -1) {
+                    this.buildState.current[emptyIndex] = letter;
+                    this.buildState.pool.splice(index, 1);
+                    this.updateBuildWordUI();
+                    this.checkBuildWordComplete();
+                }
+            };
+            poolContainer.appendChild(btn);
+        });
+
+        // Кнопки управления
+        const controls = document.createElement('div');
+        controls.className = 'build-controls';
+        
+        const btnClear = document.createElement('button');
+        btnClear.className = 'btn-action';
+        btnClear.textContent = 'Стереть всё';
+        btnClear.onclick = () => {
+            if(this.isProcessing) return;
+            this.buildState.pool = [...this.buildState.pool, ...this.buildState.current.filter(l => l !== null)];
+            this.buildState.current = new Array(this.buildState.target.length).fill(null);
+            this.updateBuildWordUI();
+        };
+        
+        controls.appendChild(btnClear);
+
+        this.ui.optionsArea.appendChild(slotsContainer);
+        this.ui.optionsArea.appendChild(poolContainer);
+        this.ui.optionsArea.appendChild(controls);
+    },
+
+    checkBuildWordComplete() {
+        if (!this.buildState.current.includes(null)) {
+            const wordFormed = this.buildState.current.join('');
+            const isCorrect = wordFormed.toLowerCase() === this.buildState.target.toLowerCase();
+            
+            const slots = this.ui.optionsArea.querySelectorAll('.build-slot');
+            slots.forEach(s => s.classList.add(isCorrect ? 'correct' : 'wrong'));
+            
+            this.checkAnswer(isCorrect, null, isCorrect ? 500 : 1000);
+            
+            if (!isCorrect) {
+                // Возвращаем буквы обратно после ошибки
+                setTimeout(() => {
+                    this.buildState.pool = [...this.buildState.pool, ...this.buildState.current];
+                    this.buildState.current = new Array(this.buildState.target.length).fill(null);
+                    this.updateBuildWordUI();
+                }, 1000);
+            }
+        }
+    },
+
+    renderDictation() {
+        this.ui.questionArea.innerHTML = `
+            <div class="question-emoji">🎧</div>
+            <div class="question-hint">Прослушайте и напишите слово</div>
+            <button class="btn-audio" onclick="app.speech.play('${this.currentWord.word.replace(/'/g, "\\'")}')">🔊 Повторить</button>
+        `;
+
+        this.ui.optionsArea.className = 'text-center';
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'dictation-input';
+        input.placeholder = 'Введите слово...';
+        input.autocomplete = 'off';
+        input.spellcheck = false;
+        
+        const controls = document.createElement('div');
+        controls.className = 'build-controls';
+
+        const btnCheck = document.createElement('button');
+        btnCheck.className = 'btn-primary';
+        btnCheck.textContent = 'Проверить';
+        
+        const btnHint = document.createElement('button');
+        btnHint.className = 'btn-action';
+        btnHint.textContent = '💡 Подсказка';
+
+        const submitDictation = () => {
+            if (this.isProcessing || !input.value.trim()) return;
+            const userVal = input.value.trim().toLowerCase().replace(/\s+/g, ' ');
+            const targetVal = this.currentWord.word.toLowerCase();
+            const isCorrect = userVal === targetVal;
+            
+            input.classList.add(isCorrect ? 'correct' : 'wrong');
+            input.disabled = true;
+            this.checkAnswer(isCorrect, null);
+            
+            if (!isCorrect) {
+                setTimeout(() => {
+                    input.classList.remove('wrong');
+                    input.disabled = false;
+                    input.value = '';
+                    input.focus();
+                }, 1000);
+            }
+        };
+
+        input.onkeypress = (e) => { if (e.key === 'Enter') submitDictation(); };
+        btnCheck.onclick = submitDictation;
+        btnHint.onclick = () => { input.value = this.currentWord.word[0]; input.focus(); };
+
+        controls.appendChild(btnCheck);
+        controls.appendChild(btnHint);
+        
+        this.ui.optionsArea.appendChild(input);
+        this.ui.optionsArea.appendChild(controls);
+
+        setTimeout(() => {
+            input.focus();
+            this.speech.play(this.currentWord.word);
+        }, 300);
+    },
+
+    async checkAnswer(isCorrect, element = null, delay = 1000) {
+        if (this.isProcessing) return;
+        this.isProcessing = true;
+
+        if (element) {
+            element.classList.add(isCorrect ? 'correct' : 'wrong');
+            if (isCorrect) element.innerHTML += ' <span style="float:right">✓</span>';
+            else element.innerHTML += ' <span style="float:right">✗</span>';
+        }
+
+        if (isCorrect) {
+            this.correctCount++;
+            this.updateProgressUI();
+            await this.utils.wait(delay > 1000 ? 500 : 500); // Короткая пауза при успехе
+        } else {
+            this.errorCount++;
+            this.queue.push(this.currentWord); // Слово возвращается в конец очереди
+            await this.utils.wait(delay);
+        }
+
+        this.isProcessing = false;
+        this.nextQuestion();
+    },
+
+    finishLevel() {
+        this.ui.game.classList.add('hidden');
+        this.ui.result.classList.remove('hidden');
+        
+        let stars = 1;
+        if (this.errorCount === 0) stars = 3;
+        else if (this.errorCount <= 3) stars = 2;
+
+        this.storage.save(this.currentLevel, stars);
+        
+        const starsHtml = '★'.repeat(stars).padEnd(3, '☆')
+            .replace(/★/g, '<span class="star filled">★</span>')
+            .replace(/☆/g, '<span class="star">☆</span>');
+            
+        document.getElementById('result-stars').innerHTML = starsHtml;
+        
+        const textEl = document.getElementById('result-text');
+        if (stars === 3) textEl.textContent = "Идеально! Ни одной ошибки!";
+        else if (stars === 2) textEl.textContent = "Хорошая работа! Почти без ошибок.";
+        else textEl.textContent = "Уровень пройден! Практикуйтесь ещё, чтобы получить больше звёзд.";
+    },
+
+    restartLevel() {
+        this.startLevel(this.currentLevel);
+    },
+    
+    nextLevel() {
+        let next = this.currentLevel + 1;
+        if (next > 7) next = 1;
+        this.startLevel(next);
+    }
+};
+
+// Запуск при загрузке
+window.onload = () => app.init();
+</script>
+
+</body>
+</html>
